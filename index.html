@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Buscador de Processos JusBrasil (com OAB por UF)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  :root {
+    --primary: #5a2a82;
+    --primary-hover: #4a206f;
+    --bg: #f7f7fb;
+    --card: #ffffff;
+    --muted: #6b7280;
+    --ok: #16a34a;
+    --warn: #d97706;
+    --err: #dc2626;
+    --border: #e5e7eb;
+    --text: #111827;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  .container { max-width: 760px; margin: 40px auto; padding: 0 20px; }
+  h1 { margin: 0 0 8px; font-size: 26px; letter-spacing: -0.3px; }
+  .subtitle { margin: 0 0 24px; color: var(--muted); font-size: 14px; }
+  .card {
+    background: var(--card);
+    padding: 22px 24px;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    border: 1px solid var(--border);
+  }
+  .form-grid { display: grid; gap: 10px; margin-bottom: 14px; }
+  .form-row { display: flex; gap: 8px; }
+  input[type="text"], select {
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 15px;
+    outline: none;
+    background: white;
+  }
+  input[type="text"]:focus, select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(90, 42, 130, 0.15);
+  }
+  input[type="text"] { flex: 1; }
+  select { min-width: 130px; }
+  button.primary {
+    padding: 12px 18px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  button.primary:hover:not(:disabled) { background: var(--primary-hover); }
+  button.primary:disabled { opacity: 0.6; cursor: not-allowed; }
+  .examples { margin-top: 8px; font-size: 13px; color: var(--muted); }
+  .examples button {
+    background: transparent;
+    border: 1px dashed var(--border);
+    color: var(--muted);
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 400;
+    border-radius: 999px;
+    cursor: pointer;
+    margin: 4px 4px 0 0;
+  }
+  .examples button:hover { border-color: var(--primary); color: var(--primary); }
+  .resultado {
+    margin-top: 18px;
+    padding: 16px 18px;
+    border-radius: 10px;
+    line-height: 1.5;
+  }
+  .resultado.ok { background: #ecfdf5; border: 1px solid #a7f3d0; }
+  .resultado.warn { background: #fffbeb; border: 1px solid #fde68a; }
+  .resultado.err { background: #fef2f2; border: 1px solid #fecaca; }
+  .url-display {
+    display: block;
+    margin-top: 10px;
+    padding: 12px 14px;
+    background: #f3f4f6;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+    word-break: break-all;
+    color: var(--primary);
+    text-decoration: none;
+  }
+  .url-display:hover { background: #ebebf0; }
+  .details { margin: 14px 0 0; font-size: 13px; color: var(--muted); }
+  .details dt { display: inline-block; min-width: 130px; color: #374151; font-weight: 500; }
+  .details dd { display: inline; margin: 0; }
+  .details dt, .details dd { line-height: 1.9; }
+  .badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .badge.ok { background: var(--ok); }
+  .badge.warn { background: var(--warn); }
+  .badge.err { background: var(--err); }
+  .section-title {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--muted);
+    font-weight: 700;
+    margin: 16px 0 8px;
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+  }
+  footer { margin-top: 30px; text-align: center; font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🔎 Buscador de Processos JusBrasil + OAB</h1>
+  <p class="subtitle">Cole o nome completo <b>e a UF</b> para receber a página JusBrasil com todos os processos <b>e</b> a OAB exata na seccional.</p>
+
+  <div class="card">
+    <form id="form" autocomplete="off">
+      <div class="form-grid">
+        <div class="form-row">
+          <input id="nome" type="text" placeholder="Ex: Juliana Carvalho Gomes" required minlength="3">
+        </div>
+        <div class="form-row">
+          <select id="uf" title="UF (sigla do estado)">
+            <option value="">(sem UF — só JusBrasil)</option>
+            <option value="AC">AC — Acre</option>
+            <option value="AL">AL — Alagoas</option>
+            <option value="AM">AM — Amazonas</option>
+            <option value="AP">AP — Amapá</option>
+            <option value="BA">BA — Bahia</option>
+            <option value="CE">CE — Ceará</option>
+            <option value="DF">DF — Distrito Federal</option>
+            <option value="ES">ES — Espírito Santo</option>
+            <option value="GO">GO — Goiás</option>
+            <option value="MA">MA — Maranhão</option>
+            <option value="MG">MG — Minas Gerais</option>
+            <option value="MS">MS — Mato Grosso do Sul</option>
+            <option value="MT">MT — Mato Grosso</option>
+            <option value="PA">PA — Pará</option>
+            <option value="PB">PB — Paraíba</option>
+            <option value="PE">PE — Pernambuco</option>
+            <option value="PI">PI — Piauí</option>
+            <option value="PR">PR — Paraná</option>
+            <option value="RJ">RJ — Rio de Janeiro</option>
+            <option value="RN">RN — Rio Grande do Norte</option>
+            <option value="RO">RO — Rondônia</option>
+            <option value="RR">RR — Roraima</option>
+            <option value="RS">RS — Rio Grande do Sul</option>
+            <option value="SC">SC — Santa Catarina</option>
+            <option value="SE">SE — Sergipe</option>
+            <option value="SP">SP — São Paulo</option>
+            <option value="TO">TO — Tocantins</option>
+          </select>
+          <button id="btn" class="primary" type="submit">Buscar</button>
+        </div>
+      </div>
+      <div class="examples">
+        Exemplos:
+        <button type="button" data-nome="Juliana Carvalho Gomes" data-uf="MG">Juliana Carvalho Gomes · MG</button>
+        <button type="button" data-nome="JAMILA DRIELLY MOURA OLIVEIRA" data-uf="RR">Jamila Drielly · RR</button>
+        <button type="button" data-nome="">só JusBrasil</button>
+      </div>
+      <div id="resultado"></div>
+    </form>
+  </div>
+
+  <footer>
+    Resultados vêm do Google via filtro <code>site:jusbrasil.com.br</code> e <code>site:oabXX.org.br</code>. Sem dados armazenados.
+  </footer>
+</div>
+
+<script>
+  const form  = document.getElementById('form');
+  const input = document.getElementById('nome');
+  const selUf = document.getElementById('uf');
+  const btn   = document.getElementById('btn');
+  const out   = document.getElementById('resultado');
+
+  const JB_LABELS = {
+    exact_slug_match:           ['Match exato',                    'ok'],
+    slug_strip_match:           ['Match parcial (verificar)',     'warn'],
+    first_jusbrasil_match:      ['Primeiro JusBrasil',            'warn'],
+    no_jusbrasil_url_in_results:['Sem página JusBrasil',          'err'],
+  };
+  const OAB_LABELS = {
+    exact_oab_profile_url:      ['Perfil OAB exato',                           'ok'],
+    partial_oab_profile_url:    ['Perfil OAB parcial',                         'warn'],
+    first_oab_site_url:         ['Primeira URL da seccional',                  'warn'],
+    no_oab_url_in_results:      ['Seccional sem página',                       'err'],
+    uf_not_provided:            ['UF não informada',                           'warn'],
+    invalid_uf:                 ['UF inválida',                                'err'],
+  };
+
+  document.querySelectorAll('.examples button').forEach(b => {
+    b.addEventListener('click', () => {
+      input.value = b.dataset.nome || '';
+      if (b.dataset.uf) selUf.value = b.dataset.uf;
+      input.focus();
+    });
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nome = input.value.trim();
+    if (nome.length < 3) return;
+    const uf = selUf.value;
+
+    btn.disabled = true;
+    btn.textContent = 'Buscando…';
+    out.innerHTML = '';
+
+    try {
+      const params = new URLSearchParams({ nome });
+      if (uf) params.set('uf', uf);
+      const res = await fetch(`/api/search?${params.toString()}`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+        throw new Error(err.detail || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      render(data);
+    } catch (err) {
+      out.innerHTML = `<div class="resultado err"><strong>Erro:</strong> ${escape(err.message)}</div>`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Buscar';
+    }
+  });
+
+  function render(data) {
+    // ---- Bloco JusBrasil ----
+    const url = data.jusbrasil_url;
+    const cls = (url && data.jusbrasil_match_quality === 'exact_slug_match') ? 'ok'
+              : (data.jusbrasil_match_quality === 'no_jusbrasil_url_in_results') ? 'err'
+              : 'warn';
+    const [jbLabel, jbBadgeCls] = JB_LABELS[data.jusbrasil_match_quality] || [data.jusbrasil_match_quality, 'warn'];
+
+    let html = `<div class="resultado ${cls}">`;
+    html += `<div class="section-title" style="border-top:none;padding-top:0">JusBrasil · processos encontrados</div>`;
+    if (url) {
+      const totalTxt = (data.total_processos != null)
+        ? `, com <strong>${data.total_processos.toLocaleString('pt-BR')}</strong> processos`
+        : '';
+      html += `
+        <strong>Página JusBrasil encontrada</strong>
+        <span class="badge ${jbBadgeCls}">${escape(jbLabel)}</span>${totalTxt}
+        <a class="url-display" href="${escape(url)}" target="_blank" rel="noopener noreferrer">${escape(url)}</a>
+        <dl class="details">
+          <dt>Nome buscado:</dt>      <dd>${escape(data.nome)}</dd>
+          <dt>Slug JusBrasil:</dt>    <dd><code>${escape(data.slug_calculado)}</code></dd>
+          <dt>Query Google:</dt>      <dd><code>${escape(data.google_query_jusbrasil)}</code></dd>
+        </dl>`;
+    } else {
+      html += `
+        <strong>O JusBrasil não parece ter página agregada para esse nome.</strong>
+        <span class="badge ${jbBadgeCls}">${escape(jbLabel)}</span>
+        <p>Tente variações (nome social, nome de solteira, abreviações).</p>`;
+    }
+    html += '</div>';
+
+    // ---- Bloco OAB ----
+    if (data.oab) {
+      const oab = data.oab;
+      const oabCls = (oab.oab_formatado && oab.oab_match_quality === 'exact_oab_profile_url') ? 'ok'
+                  : (oab.oab_match_quality === 'no_oab_url_in_results' || oab.oab_match_quality === 'invalid_uf') ? 'err'
+                  : 'warn';
+      const [oabLabel, oabBadgeCls] = OAB_LABELS[oab.oab_match_quality] || [String(oab.oab_match_quality), 'warn'];
+
+      html += `<div class="resultado ${oabCls}">`;
+      html += `<div class="section-title">OAB · seccional ${oab.uf ? '· ' + escape(oab.uf) : '(não consultada)'}</div>`;
+      if (oab.oab_formatado) {
+        html += `
+          <strong>OAB/${escape(oab.uf)} ${escape(oab.oab_numero)}</strong>
+          <span class="badge ${oabBadgeCls}">${escape(oabLabel)}</span>
+          <a class="url-display" href="${escape(oab.oab_url)}" target="_blank" rel="noopener noreferrer">${escape(oab.oab_url)}</a>
+          <dl class="details">
+            <dt>Seccional:</dt>   <dd>${escape(oab.oab_site)}</dd>
+            <dt>UF 输入ada:</dt>  <dd>${escape(oab.uf_input || '—')}</dd>
+            <dt>Match OAB:</dt>   <dd>${escape(oab.oab_match_quality)}</dd>
+          </dl>`;
+      } else if (oab.oab_url) {
+        html += `
+          <strong>Encontrei uma página na seccional, mas o número OAB não veio no snippet.</strong>
+          <span class="badge ${oabBadgeCls}">${escape(oabLabel)}</span>
+          <a class="url-display" href="${escape(oab.oab_url)}" target="_blank" rel="noopener noreferrer">${escape(oab.oab_url)}</a>
+          <dl class="details">
+            <dt>Seccional:</dt>   <dd>${escape(oab.oab_site)}</dd>
+            <dt>UF 输入ada:</dt>  <dd>${escape(oab.uf_input || '—')}</dd>
+          </dl>`;
+      } else if (oab.oab_match_quality === 'invalid_uf') {
+        html += `
+          <strong>UF inválida.</strong>
+          <span class="badge ${oabBadgeCls}">${escape(oabLabel)}</span>
+          <p>UFs válidas: ${(oab.valid_ufs || []).map(escape).join(', ')}.</p>`;
+      } else if (oab.oab_match_quality === 'uf_not_provided') {
+        html += `
+          <strong>OAB não consultada.</strong>
+          <span class="badge ${oabBadgeCls}">${escape(oabLabel)}</span>
+          <p>Selecione uma UF para incluir a busca de OAB na seccional correspondente.</p>`;
+      } else {
+        html += `
+          <strong>Não foi possível confirmar a OAB nessa seccional.</strong>
+          <span class="badge ${oabBadgeCls}">${escape(oabLabel)}</span>
+          <p>Tente outra UF ou confirme manualmente via o site da seccional.</p>`;
+      }
+      html += '</div>';
+    }
+
+    out.innerHTML = html;
+  }
+
+  function escape(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+    })[c]);
+  }
+</script>
+</body>
+</html>
